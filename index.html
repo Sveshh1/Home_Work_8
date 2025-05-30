@@ -73,20 +73,20 @@
       anchor.group.add(plane);
       anchor.group.add(sphere);
 
-      // Текстура дерева
-      const loader = new THREE.TextureLoader();
-      loader.load(
-        'https://raw.githubusercontent.com/Sveshh1/Home_Work_8/main/wood.jpg',
-        (texture) => {
-          texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-          texture.repeat.set(20, 20); // більше повторів
-          plane.material.map = texture;
-          plane.material.needsUpdate = true;
-          console.log("🖼️ Текстура завантажена");
-        },
-        undefined,
-        (err) => console.warn("⚠️ Не вдалося завантажити текстуру:", err)
-      );
+      // // Текстура дерева
+      // const loader = new THREE.TextureLoader();
+      // loader.load(
+      //   'https://raw.githubusercontent.com/Sveshh1/Home_Work_8/main/wood.jpg',
+      //   (texture) => {
+      //     texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+      //     texture.repeat.set(20, 20); // більше повторів
+      //     plane.material.map = texture;
+      //     plane.material.needsUpdate = true;
+      //     console.log("🖼️ Текстура завантажена");
+      //   },
+      //   undefined,
+      //   (err) => console.warn("⚠️ Не вдалося завантажити текстуру:", err)
+      // );
 
       // Анімація руху кульки
       function animate(delta) {
