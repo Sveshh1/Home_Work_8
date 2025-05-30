@@ -7,49 +7,48 @@
   <script type="importmap">
   {
     "imports": {
-      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-      "three/examples/jsm/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      "three": "https://unpkg.com/three@0.153.0/build/three.module.js",
+      "three/examples/jsm/": "https://unpkg.com/three@0.153.0/examples/jsm/"
     }
   }
   </script>
   <style>
     body { margin: 0; overflow: hidden; background-color: black; }
+    #ar-container { width: 100vw; height: 100vh; position: relative; }
     h1 {
       position: absolute; top: 20px; left: 50%;
       transform: translateX(-50%);
       color: white; font-family: Arial, sans-serif;
       z-index: 10;
+      pointer-events: none;
     }
   </style>
 </head>
 <body>
   <h1>Гумова кулька на похилій площині – Three.js та MindAR</h1>
+  <div id="ar-container"></div>
 
   <script type="module">
     import * as THREE from 'three';
     import { MindARThree } from 'https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js';
 
-    // Ініціалізація MindAR з маркером NBA (потрібен файл marker.mind)
     const mindarThree = new MindARThree({
-      container: document.body,
-      imageTargetSrc: 'marker.mind', // твій MindAR-маркер у форматі .mind
-      maxTrack: 1,
-      filterMinCF: 0.0001,
-      filterBeta: 0.0001,
-    });
+  container: document.querySelector("#ar-container"),
+  imageTargetSrc: 'https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/examples/image-targets/mindar-logo.mind',
+  maxTrack: 1,
+  filterMinCF: 0.0001,
+  filterBeta: 0.0001,
+});
+
 
     const { renderer, scene, camera } = mindarThree;
     const anchor = mindarThree.addAnchor(0);
 
-    // Освітлення сцени
-    const ambientLight = new THREE.AmbientLight(0x404040, 2);
-    scene.add(ambientLight);
-
+    scene.add(new THREE.AmbientLight(0x404040, 2));
     const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
     directionalLight.position.set(5, 10, 5);
     scene.add(directionalLight);
 
-    // Похилу площину (матеріал з текстурою дерева)
     const loader = new THREE.TextureLoader();
     const woodTexture = loader.load('https://raw.githubusercontent.com/aframevr/sample-assets/master/assets/images/wood/wood.jpg');
     woodTexture.wrapS = THREE.RepeatWrapping;
@@ -59,59 +58,61 @@
     const planeGeometry = new THREE.PlaneGeometry(10, 10);
     const planeMaterial = new THREE.MeshStandardMaterial({ map: woodTexture });
     const plane = new THREE.Mesh(planeGeometry, planeMaterial);
-    plane.rotation.x = -Math.PI / 6; // нахил 30 градусів
+    plane.rotation.x = -Math.PI / 6;
     plane.position.set(0, 0, 0);
     anchor.group.add(plane);
 
-    // Гумова кулька
-    const sphereSegmentsHeight = 32; // експериментуй з цим числом
-    const sphereGeometry = new THREE.SphereGeometry(0.5, 32, sphereSegmentsHeight);
+    const sphereGeometry = new THREE.SphereGeometry(0.5, 32, 32);
     const sphereMaterial = new THREE.MeshStandardMaterial({
       color: 0x00ff00,
       roughness: 0.6,
       metalness: 0.4,
-      // Для кращого вигляду можна додати текстуру шуму (не обов'язково)
     });
     const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
     sphere.position.set(0, 3, 0);
     anchor.group.add(sphere);
 
-    // Фізика гумової кульки з пружними ударами
     const gravity = 9.81;
     let velocity = 0;
-    const damping = 1.0; // абсолютно пружний удар = 1.0 (нема втрат)
+    const damping = 1.0;
 
-    // Анімація падіння кульки по нахиленій площині
     function animate(delta) {
-      // Додамо вплив нахилу площини на рух по площині (ось X)
-      // Спрощено: прискорення вздовж площини = gravity * sin(нахил)
-      const inclineAngle = Math.PI / 6; // 30 градусів
+      const inclineAngle = Math.PI / 6;
       const accelX = gravity * Math.sin(inclineAngle);
 
-      // Оновлюємо швидкість і позицію по Y та X
       velocity += gravity * delta;
       sphere.position.y -= velocity * delta;
-
-      // Позиція по X - рух вниз по похилій площині
       sphere.position.x += accelX * delta;
 
-      // Відскік від площини по Y
       if (sphere.position.y <= 0.5) {
         sphere.position.y = 0.5;
-        velocity = -velocity * damping; // відскік (пружний)
+        velocity = -velocity * damping;
       }
     }
 
-    // Камера рухається вздовж похилої площини, слідкуючи за кулькою
     function updateCamera() {
-      // Камера на висоті і ззаду кульки по Z
       camera.position.set(sphere.position.x, sphere.position.y + 2, sphere.position.z + 6);
       camera.lookAt(sphere.position.x, sphere.position.y, sphere.position.z);
     }
 
-    // Запуск AR сцени
     async function start() {
-      await mindarThree.start();
+      // Запитуємо дозвіл на камеру явно
+      try {
+        await navigator.mediaDevices.getUserMedia({ video: true });
+        console.log("Дозвіл на камеру отримано");
+      } catch(e) {
+        alert("Відмовлено у доступі до камери або камера недоступна.\n" + e.message);
+        return;
+      }
+
+      try {
+        await mindarThree.start();
+        console.log("MindAR запущено");
+      } catch(e) {
+        console.error("Помилка запуску MindAR:", e);
+        alert("Помилка запуску MindAR – дивись консоль.");
+        return;
+      }
 
       let lastTime = performance.now();
 
@@ -131,6 +132,3 @@
   </script>
 </body>
 </html>
-
-
-
