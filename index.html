@@ -4,10 +4,7 @@
   <meta charset="UTF-8" />
   <title>Гумова кулька – AR</title>
 
-  <!-- Підключення es-module-shims для підтримки importmap -->
   <script async src="https://ga.jspm.io/npm:es-module-shims@1.6.3/dist/es-module-shims.js"></script>
-
-  <!-- Визначення importmap -->
   <script type="importmap">
     {
       "imports": {
@@ -32,6 +29,8 @@
     import { MindARThree } from 'mindar-image-three';
 
     const startAR = async () => {
+      console.log("🎬 Початок ініціалізації MindAR...");
+
       const mindarThree = new MindARThree({
         container: document.querySelector("#ar-container"),
         imageTargetSrc: 'https://raw.githubusercontent.com/Sveshh1/Home_Work_8/main/marker.mind',
@@ -39,7 +38,7 @@
       });
 
       const { renderer, scene, camera } = mindarThree;
-      renderer.setClearColor(0x000000, 0); // прозорий фон
+      renderer.setClearColor(0x000000, 0);
 
       const anchor = mindarThree.addAnchor(0);
 
@@ -49,13 +48,6 @@
       dirLight.position.set(5, 10, 5);
       scene.add(dirLight);
 
-      // Кулька
-      const sphere = new THREE.Mesh(
-        new THREE.SphereGeometry(0.5, 32, 16),
-        new THREE.MeshStandardMaterial({ color: 0x00ff00 })
-      );
-      sphere.position.set(0, 3, 0);
-
       // Фізика
       const incline = Math.PI / 6;
       const gravity = 9.81;
@@ -63,28 +55,40 @@
       let vx = 0, vy = 0;
       const damping = 0.6;
 
-      // Текстура
+      // Площина (велика)
+      const plane = new THREE.Mesh(
+        new THREE.PlaneGeometry(100, 100),
+        new THREE.MeshStandardMaterial({ color: 0x808080 })
+      );
+      plane.rotation.x = -incline;
+
+      // Кулька
+      const sphere = new THREE.Mesh(
+        new THREE.SphereGeometry(0.5, 32, 16),
+        new THREE.MeshStandardMaterial({ color: 0x00ff00 })
+      );
+      sphere.position.set(0, 3, 0);
+
+      // Додавання до сцени
+      anchor.group.add(plane);
+      anchor.group.add(sphere);
+
+      // Текстура дерева
       const loader = new THREE.TextureLoader();
       loader.load(
         'https://raw.githubusercontent.com/Sveshh1/Home_Work_8/main/wood.jpg',
         (texture) => {
           texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-          texture.repeat.set(4, 4);
-
-          const plane = new THREE.Mesh(
-            new THREE.PlaneGeometry(10, 10),
-            new THREE.MeshStandardMaterial({ map: texture })
-          );
-          plane.rotation.x = -incline;
-
-          anchor.group.add(plane);
-          anchor.group.add(sphere);
+          texture.repeat.set(20, 20); // більше повторів
+          plane.material.map = texture;
+          plane.material.needsUpdate = true;
+          console.log("🖼️ Текстура завантажена");
         },
         undefined,
-        (err) => console.error("Помилка завантаження текстури:", err)
+        (err) => console.warn("⚠️ Не вдалося завантажити текстуру:", err)
       );
 
-      // Анімація
+      // Анімація руху кульки
       function animate(delta) {
         const accel = gravity * Math.sin(incline);
         vy -= gravity * Math.cos(incline) * delta;
@@ -105,18 +109,18 @@
         }
       }
 
+      // Камера — фіксована, щоб бачити площину
       function updateCamera() {
-        camera.position.set(sphere.position.x, sphere.position.y + 2, sphere.position.z + 6);
-        camera.lookAt(sphere.position);
+        camera.position.set(0, 15, 30); // можна підлаштувати
+        camera.lookAt(0, 0, 0);
         camera.updateMatrixWorld();
       }
 
-      // Події
-      anchor.onTargetFound = () => console.log("🎯 Маркер знайдено");
+      anchor.onTargetFound = () => console.log("🎯 Маркер знайдено!");
       anchor.onTargetLost = () => console.log("❌ Маркер втрачено");
 
       await mindarThree.start();
-      console.log("✅ AR запущено");
+      console.log("✅ AR система запущена");
 
       let lastTime = performance.now();
       renderer.setAnimationLoop(() => {
