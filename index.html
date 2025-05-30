@@ -2,120 +2,123 @@
 <html lang="uk">
 <head>
   <meta charset="UTF-8" />
-  <title>Гумова кулька на похилій площині – Three.js та MindAR</title>
-  <script async src="https://unpkg.com/es-module-shims@1.7.1/dist/es-module-shims.js"></script>
+  <title>Гумова кулька – AR</title>
+
+  <!-- Підключення es-module-shims для підтримки importmap -->
+  <script async src="https://ga.jspm.io/npm:es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+
+  <!-- Визначення importmap -->
   <script type="importmap">
-  {
-    "imports": {
-      "three": "https://unpkg.com/three@0.153.0/build/three.module.js",
-      "three/examples/jsm/": "https://unpkg.com/three@0.153.0/examples/jsm/"
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+        "mindar-image-three": "https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"
+      }
     }
-  }
   </script>
+
   <style>
     body { margin: 0; overflow: hidden; background-color: black; }
     #ar-container { width: 100vw; height: 100vh; position: relative; }
-    h1 {
-      position: absolute; top: 20px; left: 50%;
-      transform: translateX(-50%);
-      color: white; font-family: Arial, sans-serif;
-      z-index: 10;
-      pointer-events: none;
-    }
+    canvas { position: absolute; top: 0; left: 0; }
   </style>
 </head>
 <body>
-  <h1>Гумова кулька на похилій площині – Three.js та MindAR</h1>
   <div id="ar-container"></div>
 
   <script type="module">
     import * as THREE from 'three';
-    import { MindARThree } from 'https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js';
+    import { MindARThree } from 'mindar-image-three';
 
-    const mindarThree = new MindARThree({
-  container: document.querySelector("#ar-container"),
-  imageTargetSrc: 'https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/examples/image-targets/mindar-logo.mind',
-  maxTrack: 1,
-  filterMinCF: 0.0001,
-  filterBeta: 0.0001,
-});
+    const startAR = async () => {
+      const mindarThree = new MindARThree({
+        container: document.querySelector("#ar-container"),
+        imageTargetSrc: 'https://raw.githubusercontent.com/Sveshh1/Home_Work_8/main/marker.mind',
+        maxTrack: 1
+      });
 
+      const { renderer, scene, camera } = mindarThree;
+      renderer.setClearColor(0x000000, 0); // прозорий фон
 
-    const { renderer, scene, camera } = mindarThree;
-    const anchor = mindarThree.addAnchor(0);
+      const anchor = mindarThree.addAnchor(0);
 
-    scene.add(new THREE.AmbientLight(0x404040, 2));
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-    directionalLight.position.set(5, 10, 5);
-    scene.add(directionalLight);
+      // Світло
+      scene.add(new THREE.AmbientLight(0xffffff, 1));
+      const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      dirLight.position.set(5, 10, 5);
+      scene.add(dirLight);
 
-    const loader = new THREE.TextureLoader();
-    const woodTexture = loader.load('https://raw.githubusercontent.com/aframevr/sample-assets/master/assets/images/wood/wood.jpg');
-    woodTexture.wrapS = THREE.RepeatWrapping;
-    woodTexture.wrapT = THREE.RepeatWrapping;
-    woodTexture.repeat.set(4, 4);
+      // Кулька
+      const sphere = new THREE.Mesh(
+        new THREE.SphereGeometry(0.5, 32, 16),
+        new THREE.MeshStandardMaterial({ color: 0x00ff00 })
+      );
+      sphere.position.set(0, 3, 0);
 
-    const planeGeometry = new THREE.PlaneGeometry(10, 10);
-    const planeMaterial = new THREE.MeshStandardMaterial({ map: woodTexture });
-    const plane = new THREE.Mesh(planeGeometry, planeMaterial);
-    plane.rotation.x = -Math.PI / 6;
-    plane.position.set(0, 0, 0);
-    anchor.group.add(plane);
+      // Фізика
+      const incline = Math.PI / 6;
+      const gravity = 9.81;
+      const radius = 0.5;
+      let vx = 0, vy = 0;
+      const damping = 0.6;
 
-    const sphereGeometry = new THREE.SphereGeometry(0.5, 32, 32);
-    const sphereMaterial = new THREE.MeshStandardMaterial({
-      color: 0x00ff00,
-      roughness: 0.6,
-      metalness: 0.4,
-    });
-    const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-    sphere.position.set(0, 3, 0);
-    anchor.group.add(sphere);
+      // Текстура
+      const loader = new THREE.TextureLoader();
+      loader.load(
+        'https://raw.githubusercontent.com/Sveshh1/Home_Work_8/main/wood.jpg',
+        (texture) => {
+          texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+          texture.repeat.set(4, 4);
 
-    const gravity = 9.81;
-    let velocity = 0;
-    const damping = 1.0;
+          const plane = new THREE.Mesh(
+            new THREE.PlaneGeometry(10, 10),
+            new THREE.MeshStandardMaterial({ map: texture })
+          );
+          plane.rotation.x = -incline;
 
-    function animate(delta) {
-      const inclineAngle = Math.PI / 6;
-      const accelX = gravity * Math.sin(inclineAngle);
+          anchor.group.add(plane);
+          anchor.group.add(sphere);
+        },
+        undefined,
+        (err) => console.error("Помилка завантаження текстури:", err)
+      );
 
-      velocity += gravity * delta;
-      sphere.position.y -= velocity * delta;
-      sphere.position.x += accelX * delta;
+      // Анімація
+      function animate(delta) {
+        const accel = gravity * Math.sin(incline);
+        vy -= gravity * Math.cos(incline) * delta;
+        vx += accel * delta;
 
-      if (sphere.position.y <= 0.5) {
-        sphere.position.y = 0.5;
-        velocity = -velocity * damping;
+        sphere.position.x += vx * delta;
+        sphere.position.y += vy * delta;
+
+        const planeY = Math.tan(incline) * sphere.position.x;
+
+        if (sphere.position.y - radius < planeY) {
+          sphere.position.y = planeY + radius;
+          vy = -vy * damping;
+          vx = vx * damping;
+
+          if (Math.abs(vy) < 0.05) vy = 0;
+          if (Math.abs(vx) < 0.05) vx = 0;
+        }
       }
-    }
 
-    function updateCamera() {
-      camera.position.set(sphere.position.x, sphere.position.y + 2, sphere.position.z + 6);
-      camera.lookAt(sphere.position.x, sphere.position.y, sphere.position.z);
-    }
-
-    async function start() {
-      // Запитуємо дозвіл на камеру явно
-      try {
-        await navigator.mediaDevices.getUserMedia({ video: true });
-        console.log("Дозвіл на камеру отримано");
-      } catch(e) {
-        alert("Відмовлено у доступі до камери або камера недоступна.\n" + e.message);
-        return;
+      function updateCamera() {
+        camera.position.set(sphere.position.x, sphere.position.y + 2, sphere.position.z + 6);
+        camera.lookAt(sphere.position);
+        camera.updateMatrixWorld();
       }
 
-      try {
-        await mindarThree.start();
-        console.log("MindAR запущено");
-      } catch(e) {
-        console.error("Помилка запуску MindAR:", e);
-        alert("Помилка запуску MindAR – дивись консоль.");
-        return;
-      }
+      // Події
+      anchor.onTargetFound = () => console.log("🎯 Маркер знайдено");
+      anchor.onTargetLost = () => console.log("❌ Маркер втрачено");
+
+      await mindarThree.start();
+      console.log("✅ AR запущено");
 
       let lastTime = performance.now();
-
       renderer.setAnimationLoop(() => {
         const now = performance.now();
         const delta = (now - lastTime) / 1000;
@@ -123,12 +126,11 @@
 
         animate(delta);
         updateCamera();
-
         renderer.render(scene, camera);
       });
-    }
+    };
 
-    start();
+    startAR();
   </script>
 </body>
 </html>
