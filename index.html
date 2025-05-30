@@ -9,7 +9,6 @@
     {
       "imports": {
         "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
         "mindar-image-three": "https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"
       }
     }
@@ -42,53 +41,57 @@
 
       const anchor = mindarThree.addAnchor(0);
 
-      // Світло
-      scene.add(new THREE.AmbientLight(0xffffff, 1));
+      // Освітлення
+      scene.add(new THREE.AmbientLight(0xffffff, 0.7));
       const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-      dirLight.position.set(5, 10, 5);
+      dirLight.position.set(5, 10, 7);
       scene.add(dirLight);
 
-      // Фізика
-      const incline = Math.PI / 6;
+      // Параметри фізики та сцени
+      const incline = Math.PI / 6; // 30 градусів
       const gravity = 9.81;
       const radius = 0.5;
       let vx = 0, vy = 0;
-      const damping = 0.6;
+      const damping = 1; // абсолютно пружний удар => damping = 1
 
-      // Площина (велика)
-      const plane = new THREE.Mesh(
-        new THREE.PlaneGeometry(100, 100),
-        new THREE.MeshStandardMaterial({ color: 0x808080 })
+      // Площина (похила)
+      const planeGeometry = new THREE.PlaneGeometry(10, 10);
+      const planeMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff });
+
+      // Завантажуємо текстуру дерева
+      const textureLoader = new THREE.TextureLoader();
+      const woodTextureUrl = 'https://raw.githubusercontent.com/aframevr/sample-assets/master/assets/images/wood.jpg';
+
+      textureLoader.load(
+        woodTextureUrl,
+        (texture) => {
+          texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+          texture.repeat.set(4, 4);
+          planeMaterial.map = texture;
+          planeMaterial.needsUpdate = true;
+          console.log("🖼️ Текстура дерева завантажена");
+        },
+        undefined,
+        (err) => {
+          console.warn("⚠️ Не вдалося завантажити текстуру дерева:", err);
+        }
       );
+
+      const plane = new THREE.Mesh(planeGeometry, planeMaterial);
       plane.rotation.x = -incline;
+      plane.position.set(0, 0, 0);
 
-      // Кулька
-      const sphere = new THREE.Mesh(
-        new THREE.SphereGeometry(0.5, 32, 16),
-        new THREE.MeshStandardMaterial({ color: 0x00ff00 })
-      );
+      // Сфера (гумова кулька) - експеримент з segmentsHeight = 32
+      const sphereGeometry = new THREE.SphereGeometry(radius, 32, 32);
+      const sphereMaterial = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
+      const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
       sphere.position.set(0, 3, 0);
 
-      // Додавання до сцени
+      // Додаємо до групи маркера
       anchor.group.add(plane);
       anchor.group.add(sphere);
 
-      // // Текстура дерева
-      // const loader = new THREE.TextureLoader();
-      // loader.load(
-      //   'https://raw.githubusercontent.com/Sveshh1/Home_Work_8/main/wood.jpg',
-      //   (texture) => {
-      //     texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-      //     texture.repeat.set(20, 20); // більше повторів
-      //     plane.material.map = texture;
-      //     plane.material.needsUpdate = true;
-      //     console.log("🖼️ Текстура завантажена");
-      //   },
-      //   undefined,
-      //   (err) => console.warn("⚠️ Не вдалося завантажити текстуру:", err)
-      // );
-
-      // Анімація руху кульки
+      // Функція анімації руху кульки
       function animate(delta) {
         const accel = gravity * Math.sin(incline);
         vy -= gravity * Math.cos(incline) * delta;
@@ -97,6 +100,7 @@
         sphere.position.x += vx * delta;
         sphere.position.y += vy * delta;
 
+        // Визначаємо висоту площини у точці x кульки
         const planeY = Math.tan(incline) * sphere.position.x;
 
         if (sphere.position.y - radius < planeY) {
@@ -104,15 +108,23 @@
           vy = -vy * damping;
           vx = vx * damping;
 
-          if (Math.abs(vy) < 0.05) vy = 0;
-          if (Math.abs(vx) < 0.05) vx = 0;
+          // Якщо швидкість дуже мала — зупиняємо рух
+          if (Math.abs(vy) < 0.001) vy = 0;
+          if (Math.abs(vx) < 0.001) vx = 0;
         }
       }
 
-      // Камера — фіксована, щоб бачити площину
+      // Камера слідкує за кулькою вздовж площини
       function updateCamera() {
-        camera.position.set(0, 15, 30); // можна підлаштувати
-        camera.lookAt(0, 0, 0);
+        // Камера трохи позаду і вище кульки, дивиться вперед по площині
+        const camX = sphere.position.x - 3 * Math.cos(incline);
+        const camY = sphere.position.y + 3;
+        const camZ = 5;
+
+        camera.position.set(camX, camY, camZ);
+
+        // Камера дивиться на кульку
+        camera.lookAt(sphere.position);
         camera.updateMatrixWorld();
       }
 
