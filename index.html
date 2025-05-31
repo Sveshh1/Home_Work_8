@@ -2,7 +2,7 @@
 <html lang="uk">
 <head>
   <meta charset="UTF-8" />
-  <title>AR Кулька — Фізика</title>
+  <title>AR Кулька — Рух за нахилом</title>
   <script async src="https://ga.jspm.io/npm:es-module-shims@1.6.3/dist/es-module-shims.js"></script>
   <script type="importmap">
     {
@@ -15,7 +15,6 @@
   <style>
     body { margin: 0; overflow: hidden; background-color: black; }
     #ar-container { width: 100vw; height: 100vh; }
-    canvas { position: absolute; top: 0; left: 0; }
   </style>
 </head>
 <body>
@@ -34,17 +33,12 @@
       const { renderer, scene, camera } = mindarThree;
       const clock = new THREE.Clock();
 
-      // Світло
-      scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1.2));
+      const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
+      scene.add(light);
 
       const anchor = mindarThree.addAnchor(0);
-
-      // Група об'єктів, яка нахилена
       const group = new THREE.Group();
       anchor.group.add(group);
-
-      const angle = Math.PI / 6; // 30 градусів
-      group.rotation.x = -angle; // нахил платформи
 
       const planeWidth = 3;
       const planeHeight = 2;
@@ -62,36 +56,53 @@
       const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
       group.add(sphere);
 
-      // Початкові координати кульки (на площині)
-      sphere.position.set(-1.3, sphereRadius, 0);
+      // Початкове положення
+      sphere.position.set(0, sphereRadius, 0);
 
-      // Фізика
-      let vx = 0;
+      // Фізичні змінні
+      let velocity = new THREE.Vector3(0, 0, 0);
       const g = 9.8;
-      const ax = g * Math.sin(angle);
-      const damping = 0.9;
+      const damping = 0.95;
 
       await mindarThree.start();
 
       renderer.setAnimationLoop(() => {
         const delta = clock.getDelta();
 
-        // Оновлення швидкості та позиції
-        vx += ax * delta;
-        sphere.position.x += vx * delta;
+        // Обчислимо нормаль площини (вектор перпендикулярний)
+        const normal = new THREE.Vector3(0, 1, 0).applyQuaternion(plane.quaternion);
 
-        // Межі платформи
+        // Проекція сили тяжіння на площину (вектор прискорення)
+        const gravity = new THREE.Vector3(0, -g, 0);
+        const acceleration = gravity.clone().projectOnPlane(normal);
+
+        // Оновлюємо швидкість
+        velocity.add(acceleration.multiplyScalar(delta));
+
+        // Оновлюємо позицію кульки
+        sphere.position.add(velocity.clone().multiplyScalar(delta));
+
+        // Відбиття від країв площини
         const maxX = planeWidth / 2 - sphereRadius;
         const minX = -planeWidth / 2 + sphereRadius;
+        const maxZ = planeHeight / 2 - sphereRadius;
+        const minZ = -planeHeight / 2 + sphereRadius;
 
-        if (sphere.position.x >= maxX) {
+        if (sphere.position.x > maxX) {
           sphere.position.x = maxX;
-          vx = -vx * damping;
+          velocity.x *= -damping;
         }
-
-        if (sphere.position.x <= minX) {
+        if (sphere.position.x < minX) {
           sphere.position.x = minX;
-          vx = -vx * damping;
+          velocity.x *= -damping;
+        }
+        if (sphere.position.z > maxZ) {
+          sphere.position.z = maxZ;
+          velocity.z *= -damping;
+        }
+        if (sphere.position.z < minZ) {
+          sphere.position.z = minZ;
+          velocity.z *= -damping;
         }
 
         renderer.render(scene, camera);
