@@ -34,36 +34,40 @@
 
       const { renderer, scene, camera } = mindarThree;
 
-      scene.add(new THREE.AmbientLight(0xffffff, 1));
+      // Світло
+      const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
+      scene.add(light);
+
       const anchor = mindarThree.addAnchor(0);
 
-      const group = new THREE.Group();
-      const platformAngle = Math.PI / 6; // 30 градусів
-      group.rotation.z = -platformAngle;
-      anchor.group.add(group);
+      // Платформа — група з нахилом
+      const platformGroup = new THREE.Group();
+      anchor.group.add(platformGroup);
 
-      const planeGeometry = new THREE.PlaneGeometry(3, 1.5);
-      const planeMaterial = new THREE.MeshStandardMaterial({ color: 0xaaaaaa });
+      const platformAngle = Math.PI / 6; // 30 градусів
+      platformGroup.rotation.z = -platformAngle;
+
+      // Платформа
+      const planeGeometry = new THREE.PlaneGeometry(2, 0.5);
+      const planeMaterial = new THREE.MeshStandardMaterial({ color: 0x888888 });
       const plane = new THREE.Mesh(planeGeometry, planeMaterial);
-      plane.position.set(0, 0, 0);
-      group.add(plane);
+      platformGroup.add(plane);
 
       // Кулька
-      const sphereRadius = 0.15;
-      const sphereGeometry = new THREE.SphereGeometry(sphereRadius, 32, 32);
+      const sphereRadius = 0.1;
+      const sphereGeometry = new THREE.SphereGeometry(sphereRadius, 32, 16);
       const sphereMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
       const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-      sphere.position.set(-1.2, 0.25, 0.1);
-      group.add(sphere);
+      platformGroup.add(sphere);
 
-      // Камера стежить за кулькою
-      camera.position.set(0, 0, 2);
+      // Початкова позиція кульки (на платформі)
+      sphere.position.set(-0.9, 0.15, 0.05);
 
       // Фізика
-      let velocity = 0;
-      const gravity = 9.8;
-      const acceleration = gravity * Math.sin(platformAngle);
-      const damping = 0.75;
+      let vx = 0;
+      const g = 9.8;
+      const ax = g * Math.sin(platformAngle);
+      const damping = 0.8;
 
       await mindarThree.start();
 
@@ -74,19 +78,14 @@
         const delta = (now - lastTime) / 1000;
         lastTime = now;
 
-        // Анімація руху кульки
-        velocity += acceleration * delta;
-        sphere.position.x += velocity * delta;
+        // Анімація кульки
+        vx += ax * delta;
+        sphere.position.x += vx * delta;
 
         // Відскок
-        if (sphere.position.x > 1.2 || sphere.position.x < -1.2) {
-          velocity = -velocity * damping;
+        if (sphere.position.x > 0.9 || sphere.position.x < -0.9) {
+          vx = -vx * damping;
         }
-
-        // Камера слідує за кулькою
-        camera.position.x = group.position.x + sphere.position.x * Math.cos(platformAngle);
-        camera.position.y = group.position.y + sphere.position.x * Math.sin(platformAngle);
-        camera.lookAt(group.position);
 
         renderer.render(scene, camera);
       });
