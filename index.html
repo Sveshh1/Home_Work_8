@@ -2,13 +2,12 @@
 <html lang="uk">
 <head>
   <meta charset="UTF-8" />
-  <title>AR Кулька — Фізика</title>
+  <title>AR Кулька — Відбивання з усіх сторін</title>
   <script async src="https://ga.jspm.io/npm:es-module-shims@1.6.3/dist/es-module-shims.js"></script>
   <script type="importmap">
     {
       "imports": {
         "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
         "mindar-image-three": "https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"
       }
     }
@@ -16,11 +15,20 @@
   <style>
     body { margin: 0; overflow: hidden; background-color: black; }
     #ar-container { width: 100vw; height: 100vh; }
-    canvas { position: absolute; top: 0; left: 0; }
+    #start-button {
+      position: absolute;
+      z-index: 10;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      padding: 20px 40px;
+      font-size: 20px;
+    }
   </style>
 </head>
 <body>
-  <div id="ar-container"></div>
+  <div id="ar-container" style="display: none;"></div>
+  <button id="start-button">Почати AR</button>
 
   <script type="module">
     import * as THREE from 'three';
@@ -35,73 +43,87 @@
       const { renderer, scene, camera } = mindarThree;
       const clock = new THREE.Clock();
 
-      // Світло
-      const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
-      scene.add(light);
+      scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1.2));
 
-      // Прив'язка до маркеру
       const anchor = mindarThree.addAnchor(0);
 
-      // Група, що обертається
       const group = new THREE.Group();
       anchor.group.add(group);
 
-      // Параметри площини
-      const angle = Math.PI / 6; // 30 градусів
+      const angle = Math.PI / 6;
+      group.rotation.x = -angle;
+
       const planeWidth = 3;
       const planeHeight = 2;
       const sphereRadius = 0.1;
 
-      // Платформа (нахилена)
+      // Платформа
       const planeGeometry = new THREE.PlaneGeometry(planeWidth, planeHeight);
-      const planeMaterial = new THREE.MeshStandardMaterial({ color: 0xaaaaaa });
+      const planeMaterial = new THREE.MeshStandardMaterial({ color: 0x888888 });
       const plane = new THREE.Mesh(planeGeometry, planeMaterial);
-      plane.rotation.x = -angle;
       group.add(plane);
 
       // Кулька
       const sphereGeometry = new THREE.SphereGeometry(sphereRadius, 32, 16);
-      const sphereMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+      const sphereMaterial = new THREE.MeshStandardMaterial({ color: 0xff3333 });
       const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
       group.add(sphere);
 
-      // Початкові координати кульки
-      sphere.position.set(-1.3, 0.12, 0.15); // Y = трішки вище площини
+      // Початкове положення кульки (на площині)
+      sphere.position.set(-1, sphereRadius, 0.8);
 
       // Фізика
       let vx = 0;
+      let vy = 0;
       const g = 9.8;
-      const ax = g * Math.sin(angle);
-      const damping = 0.95;
+      const ax = g * Math.sin(angle) * 0.5; // коефіцієнти для реалістичності
+      const ay = g * Math.sin(angle) * 0.3;
+      const damping = 0.9;
 
       await mindarThree.start();
 
       renderer.setAnimationLoop(() => {
         const delta = clock.getDelta();
 
-        // Оновлення швидкості та позиції
+        // Прискорення на нахиленій площині
         vx += ax * delta;
-        sphere.position.x += vx * delta;
+        vy += ay * delta;
 
-        // Межі відбиття
+        sphere.position.x += vx * delta;
+        sphere.position.z += vy * delta;
+
+        // Межі платформи
         const maxX = planeWidth / 2 - sphereRadius;
         const minX = -planeWidth / 2 + sphereRadius;
+        const maxZ = planeHeight / 2 - sphereRadius;
+        const minZ = -planeHeight / 2 + sphereRadius;
 
-        if (sphere.position.x >= maxX) {
+        if (sphere.position.x > maxX) {
           sphere.position.x = maxX;
           vx = -vx * damping;
         }
-
-        if (sphere.position.x <= minX) {
+        if (sphere.position.x < minX) {
           sphere.position.x = minX;
           vx = -vx * damping;
+        }
+        if (sphere.position.z > maxZ) {
+          sphere.position.z = maxZ;
+          vy = -vy * damping;
+        }
+        if (sphere.position.z < minZ) {
+          sphere.position.z = minZ;
+          vy = -vy * damping;
         }
 
         renderer.render(scene, camera);
       });
     };
 
-    startAR();
+    document.getElementById("start-button").addEventListener("click", async () => {
+      document.getElementById("start-button").style.display = "none";
+      document.getElementById("ar-container").style.display = "block";
+      await startAR();
+    });
   </script>
 </body>
 </html>
