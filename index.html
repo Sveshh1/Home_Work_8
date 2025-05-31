@@ -2,12 +2,13 @@
 <html lang="uk">
 <head>
   <meta charset="UTF-8" />
-  <title>AR Кулька — Хаотичний рух</title>
+  <title>AR Кулька — Фізика</title>
   <script async src="https://ga.jspm.io/npm:es-module-shims@1.6.3/dist/es-module-shims.js"></script>
   <script type="importmap">
     {
       "imports": {
         "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
         "mindar-image-three": "https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"
       }
     }
@@ -41,32 +42,27 @@
       const group = new THREE.Group();
       anchor.group.add(group);
 
+      const angle = Math.PI / 6;
       const planeWidth = 3;
       const planeHeight = 2;
       const sphereRadius = 0.1;
 
-      // Площина
       const planeGeometry = new THREE.PlaneGeometry(planeWidth, planeHeight);
       const planeMaterial = new THREE.MeshStandardMaterial({ color: 0xaaaaaa });
       const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+      plane.rotation.x = -angle;
       group.add(plane);
 
-      // Кулька
       const sphereGeometry = new THREE.SphereGeometry(sphereRadius, 32, 16);
       const sphereMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
       const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
       group.add(sphere);
 
-      // Початкове положення
-      sphere.position.set(0, sphereRadius, 0);
+      sphere.position.set(-1.3, 0.12, 0.15);
 
-      // Випадкові швидкості
-      let velocity = new THREE.Vector3(
-        (Math.random() - 0.5) * 2, // x: від -1 до 1
-        0,
-        (Math.random() - 0.5) * 2  // z: від -1 до 1
-      );
-
+      // Початкові швидкості та демпфування
+      let vx = Math.random() * 0.5 + 0.3;
+      let vz = Math.random() * 0.5 - 0.25;
       const damping = 0.95;
 
       await mindarThree.start();
@@ -74,31 +70,30 @@
       renderer.setAnimationLoop(() => {
         const delta = clock.getDelta();
 
-        // Оновлення позиції
-        sphere.position.x += velocity.x * delta;
-        sphere.position.z += velocity.z * delta;
+        sphere.position.x += vx * delta;
+        sphere.position.z += vz * delta;
 
-        // Межі площини
         const maxX = planeWidth / 2 - sphereRadius;
         const minX = -planeWidth / 2 + sphereRadius;
         const maxZ = planeHeight / 2 - sphereRadius;
         const minZ = -planeHeight / 2 + sphereRadius;
 
-        // Відбиття
-        if (sphere.position.x > maxX) {
+        if (sphere.position.x >= maxX) {
           sphere.position.x = maxX;
-          velocity.x *= -damping;
-        } else if (sphere.position.x < minX) {
+          vx = -vx * damping;
+        }
+        if (sphere.position.x <= minX) {
           sphere.position.x = minX;
-          velocity.x *= -damping;
+          vx = -vx * damping;
         }
 
-        if (sphere.position.z > maxZ) {
+        if (sphere.position.z >= maxZ) {
           sphere.position.z = maxZ;
-          velocity.z *= -damping;
-        } else if (sphere.position.z < minZ) {
+          vz = -vz * damping;
+        }
+        if (sphere.position.z <= minZ) {
           sphere.position.z = minZ;
-          velocity.z *= -damping;
+          vz = -vz * damping;
         }
 
         renderer.render(scene, camera);
