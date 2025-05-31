@@ -44,32 +44,30 @@
 
       const angle = Math.PI / 6;
       const platformWidth = 3;
-      const platformHeight = 0.2; // Товщина платформи
+      const platformHeight = 0.2;
       const platformDepth = 2;
       const sphereRadius = 0.1;
 
-      // Завантаження текстури дерева
       const textureLoader = new THREE.TextureLoader();
       const woodTexture = await textureLoader.loadAsync('https://raw.githubusercontent.com/Sveshh1/Home_Work_8/main/wood.jpg');
 
-      // Платформа з об’ємом
       const boxGeometry = new THREE.BoxGeometry(platformWidth, platformHeight, platformDepth);
       const boxMaterial = new THREE.MeshStandardMaterial({ map: woodTexture });
       const platform = new THREE.Mesh(boxGeometry, boxMaterial);
       platform.rotation.x = -angle;
       group.add(platform);
 
-      // Кулька
       const sphereGeometry = new THREE.SphereGeometry(sphereRadius, 32, 16);
       const sphereMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
       const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
       group.add(sphere);
 
-      sphere.position.set(-1.3, platformHeight / 2 + sphereRadius, 0.15); // трохи над поверхнею платформи
+      // Центр над платформою
+      sphere.position.set(0, platformHeight / 2 + sphereRadius, 0);
 
-      // Початкові швидкості
-      let vx = 0.5 + Math.random() * 0.5;
-      let vy = 0.5 + Math.random() * 0.5;
+      // Початкові швидкості (в 3 рази більші)
+      let vx = (0.5 + Math.random() * 0.5) * 3;
+      let vz = (0.5 + Math.random() * 0.5) * 3;
       const damping = 0.95;
 
       await mindarThree.start();
@@ -77,13 +75,14 @@
       renderer.setAnimationLoop(() => {
         const delta = clock.getDelta();
 
+        // Рух кульки по X і Z (оскільки платформа нахилена по X, а не Y)
         sphere.position.x += vx * delta;
-        sphere.position.y += vy * delta;
+        sphere.position.z += vz * delta;
 
         const maxX = platformWidth / 2 - sphereRadius;
         const minX = -platformWidth / 2 + sphereRadius;
-        const maxY = 1.0;
-        const minY = -0.1;
+        const maxZ = platformDepth / 2 - sphereRadius;
+        const minZ = -platformDepth / 2 + sphereRadius;
 
         if (sphere.position.x >= maxX) {
           sphere.position.x = maxX;
@@ -94,20 +93,8 @@
           vx = -vx * damping;
         }
 
-        if (sphere.position.y >= maxY) {
-          sphere.position.y = maxY;
-          vy = -vy * damping;
+        if (sphere.position.z >= maxZ) {
+          sphere.position.z = maxZ;
+          vz = -vz * damping;
         }
-        if (sphere.position.y <= minY) {
-          sphere.position.y = minY;
-          vy = -vy * damping;
-        }
-
-        renderer.render(scene, camera);
-      });
-    };
-
-    startAR();
-  </script>
-</body>
-</html>
+        if (sphere.p
