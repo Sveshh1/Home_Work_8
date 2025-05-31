@@ -2,7 +2,7 @@
 <html lang="uk">
 <head>
   <meta charset="UTF-8" />
-  <title>AR Кулька — Відбивання з усіх сторін</title>
+  <title>AR Кулька — Фізика</title>
   <script async src="https://ga.jspm.io/npm:es-module-shims@1.6.3/dist/es-module-shims.js"></script>
   <script type="importmap">
     {
@@ -15,20 +15,11 @@
   <style>
     body { margin: 0; overflow: hidden; background-color: black; }
     #ar-container { width: 100vw; height: 100vh; }
-    #start-button {
-      position: absolute;
-      z-index: 10;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      padding: 20px 40px;
-      font-size: 20px;
-    }
+    canvas { position: absolute; top: 0; left: 0; }
   </style>
 </head>
 <body>
-  <div id="ar-container" style="display: none;"></div>
-  <button id="start-button">Почати AR</button>
+  <div id="ar-container"></div>
 
   <script type="module">
     import * as THREE from 'three';
@@ -43,15 +34,17 @@
       const { renderer, scene, camera } = mindarThree;
       const clock = new THREE.Clock();
 
+      // Світло
       scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1.2));
 
       const anchor = mindarThree.addAnchor(0);
 
+      // Група об'єктів, яка нахилена
       const group = new THREE.Group();
       anchor.group.add(group);
 
-      const angle = Math.PI / 6;
-      group.rotation.x = -angle;
+      const angle = Math.PI / 6; // 30 градусів
+      group.rotation.x = -angle; // нахил платформи
 
       const planeWidth = 3;
       const planeHeight = 2;
@@ -59,25 +52,23 @@
 
       // Платформа
       const planeGeometry = new THREE.PlaneGeometry(planeWidth, planeHeight);
-      const planeMaterial = new THREE.MeshStandardMaterial({ color: 0x888888 });
+      const planeMaterial = new THREE.MeshStandardMaterial({ color: 0xaaaaaa });
       const plane = new THREE.Mesh(planeGeometry, planeMaterial);
       group.add(plane);
 
       // Кулька
       const sphereGeometry = new THREE.SphereGeometry(sphereRadius, 32, 16);
-      const sphereMaterial = new THREE.MeshStandardMaterial({ color: 0xff3333 });
+      const sphereMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
       const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
       group.add(sphere);
 
-      // Початкове положення кульки (на площині)
-      sphere.position.set(-1, sphereRadius, 0.8);
+      // Початкові координати кульки (на площині)
+      sphere.position.set(-1.3, sphereRadius, 0);
 
       // Фізика
       let vx = 0;
-      let vy = 0;
       const g = 9.8;
-      const ax = g * Math.sin(angle) * 0.5; // коефіцієнти для реалістичності
-      const ay = g * Math.sin(angle) * 0.3;
+      const ax = g * Math.sin(angle);
       const damping = 0.9;
 
       await mindarThree.start();
@@ -85,45 +76,29 @@
       renderer.setAnimationLoop(() => {
         const delta = clock.getDelta();
 
-        // Прискорення на нахиленій площині
+        // Оновлення швидкості та позиції
         vx += ax * delta;
-        vy += ay * delta;
-
         sphere.position.x += vx * delta;
-        sphere.position.z += vy * delta;
 
         // Межі платформи
         const maxX = planeWidth / 2 - sphereRadius;
         const minX = -planeWidth / 2 + sphereRadius;
-        const maxZ = planeHeight / 2 - sphereRadius;
-        const minZ = -planeHeight / 2 + sphereRadius;
 
-        if (sphere.position.x > maxX) {
+        if (sphere.position.x >= maxX) {
           sphere.position.x = maxX;
           vx = -vx * damping;
         }
-        if (sphere.position.x < minX) {
+
+        if (sphere.position.x <= minX) {
           sphere.position.x = minX;
           vx = -vx * damping;
-        }
-        if (sphere.position.z > maxZ) {
-          sphere.position.z = maxZ;
-          vy = -vy * damping;
-        }
-        if (sphere.position.z < minZ) {
-          sphere.position.z = minZ;
-          vy = -vy * damping;
         }
 
         renderer.render(scene, camera);
       });
     };
 
-    document.getElementById("start-button").addEventListener("click", async () => {
-      document.getElementById("start-button").style.display = "none";
-      document.getElementById("ar-container").style.display = "block";
-      await startAR();
-    });
+    startAR();
   </script>
 </body>
 </html>
