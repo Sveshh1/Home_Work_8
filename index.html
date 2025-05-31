@@ -2,7 +2,7 @@
 <html lang="uk">
 <head>
   <meta charset="UTF-8" />
-  <title>AR кулька</title>
+  <title>Кулька на похилій площині</title>
   <script async src="https://ga.jspm.io/npm:es-module-shims@1.6.3/dist/es-module-shims.js"></script>
   <script type="importmap">
     {
@@ -15,7 +15,7 @@
   </script>
   <style>
     body { margin: 0; overflow: hidden; background-color: black; }
-    #ar-container { width: 100vw; height: 100vh; position: relative; }
+    #ar-container { width: 100vw; height: 100vh; }
     canvas { position: absolute; top: 0; left: 0; }
   </style>
 </head>
@@ -33,67 +33,63 @@
       });
 
       const { renderer, scene, camera } = mindarThree;
-      renderer.setClearColor(0x000000, 0);
-      renderer.outputColorSpace = THREE.SRGBColorSpace;
-
-      const anchor = mindarThree.addAnchor(0);
 
       // Світло
       scene.add(new THREE.AmbientLight(0xffffff, 1));
-      const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-      dirLight.position.set(1, 2, 3);
-      scene.add(dirLight);
 
-      // Площина (нахилена)
-      const planeGeometry = new THREE.PlaneGeometry(5, 5);
-      const planeMaterial = new THREE.MeshStandardMaterial({ color: 0x999999 });
+      // Створення якоря
+      const anchor = mindarThree.addAnchor(0);
+
+      // Нахил площини
+      const angle = Math.PI / 6; // 30 градусів
+
+      // Група платформи
+      const group = new THREE.Group();
+      group.rotation.x = -angle;
+      anchor.group.add(group);
+
+      // Платформа
+      const planeGeometry = new THREE.PlaneGeometry(3, 3);
+      const planeMaterial = new THREE.MeshStandardMaterial({ color: 0x888888 });
       const plane = new THREE.Mesh(planeGeometry, planeMaterial);
-      plane.rotation.x = -Math.PI / 6;
-      anchor.group.add(plane);
+      group.add(plane);
 
       // Кулька
-      const sphereGeometry = new THREE.SphereGeometry(0.2, 32, 16);
-      const sphereMaterial = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
+      const sphereRadius = 0.15;
+      const sphereGeometry = new THREE.SphereGeometry(sphereRadius, 32, 16);
+      const sphereMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
       const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-      sphere.position.set(0, 1, 0);
-      anchor.group.add(sphere);
 
-      // Фізика
-      let vx = 0, vy = 0;
-      const g = 9.8, angle = Math.PI / 6, damping = 0.7;
+      // Початкові координати кульки — в площині групи
+      sphere.position.set(-1.2, 0.2, 0);
+      group.add(sphere);
 
-      const radius = 0.2;
+      // Фізика — 2D у площині
+      let vx = 0;
+      const g = 9.8;
+      const ax = g * Math.sin(angle);
+      const damping = 0.75;
 
-      const animate = (delta) => {
-        const ax = g * Math.sin(angle);
-        const ay = -g * Math.cos(angle);
-
-        vx += ax * delta;
-        vy += ay * delta;
-
-        sphere.position.x += vx * delta;
-        sphere.position.y += vy * delta;
-
-        const planeY = Math.tan(angle) * sphere.position.x;
-        if (sphere.position.y - radius < planeY) {
-          sphere.position.y = planeY + radius;
-          vy = -vy * damping;
-          vx *= damping;
-        }
-      };
-
-      anchor.onTargetFound = () => console.log("🎯 Маркер знайдено!");
-      anchor.onTargetLost = () => console.log("❌ Маркер втрачено");
-
+      // Початок AR
       await mindarThree.start();
-      console.log("✅ AR система запущена");
 
-      let last = performance.now();
+      // Час
+      let lastTime = performance.now();
+
       renderer.setAnimationLoop(() => {
         const now = performance.now();
-        const delta = (now - last) / 1000;
-        last = now;
-        animate(delta);
+        const delta = (now - lastTime) / 1000;
+        lastTime = now;
+
+        // Анімація кульки
+        vx += ax * delta;
+        sphere.position.x += vx * delta;
+
+        // Якщо кулька вийшла за межі, відскакує
+        if (sphere.position.x > 1.2 || sphere.position.x < -1.2) {
+          vx = -vx * damping;
+        }
+
         renderer.render(scene, camera);
       });
     };
