@@ -30,83 +30,57 @@
       const mindarThree = new MindARThree({
         container: document.querySelector("#ar-container"),
         imageTargetSrc: 'https://raw.githubusercontent.com/Sveshh1/Home_Work_8/main/marker.mind',
-        maxTrack: 1
       });
 
       const { renderer, scene, camera } = mindarThree;
       renderer.setClearColor(0x000000, 0);
-      renderer.outputColorSpace = THREE.SRGBColorSpace; // ✅ Нова властивість
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
 
       const anchor = mindarThree.addAnchor(0);
 
       // Світло
       scene.add(new THREE.AmbientLight(0xffffff, 1));
       const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-      dirLight.position.set(5, 10, 5);
+      dirLight.position.set(1, 2, 3);
       scene.add(dirLight);
 
-      // Фізика
-      const incline = Math.PI / 6;
-      const gravity = 9.81;
-      const radius = 0.5;
-      let vx = 0, vy = 0;
-      const damping = 0.6;
-
-      // Завантаження справжньої текстури
-      const texture = new THREE.TextureLoader().load(
-        'https://threejsfundamentals.org/threejs/resources/images/checker.png' // ✅ Робоча текстура
-      );
-      texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-      texture.repeat.set(10, 10);
-
-      const planeMaterial = new THREE.MeshStandardMaterial({
-        map: texture,
-        roughness: 0.8,
-        metalness: 0.3
-      });
-
-      const plane = new THREE.Mesh(
-        new THREE.PlaneGeometry(100, 100),
-        planeMaterial
-      );
-      plane.rotation.x = -incline;
+      // Площина (нахилена)
+      const planeGeometry = new THREE.PlaneGeometry(5, 5);
+      const planeMaterial = new THREE.MeshStandardMaterial({ color: 0x999999 });
+      const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+      plane.rotation.x = -Math.PI / 6;
+      anchor.group.add(plane);
 
       // Кулька
-      const sphere = new THREE.Mesh(
-        new THREE.SphereGeometry(0.5, 32, 16),
-        new THREE.MeshStandardMaterial({ color: 0x00ff00 })
-      );
-      sphere.position.set(0, 3, 0);
-
-      anchor.group.add(plane);
+      const sphereGeometry = new THREE.SphereGeometry(0.2, 32, 16);
+      const sphereMaterial = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
+      const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+      sphere.position.set(0, 1, 0);
       anchor.group.add(sphere);
 
-      // Анімація
-      function animate(delta) {
-        const accel = gravity * Math.sin(incline);
-        vy -= gravity * Math.cos(incline) * delta;
-        vx += accel * delta;
+      // Фізика
+      let vx = 0, vy = 0;
+      const g = 9.8, angle = Math.PI / 6, damping = 0.7;
+
+      const radius = 0.2;
+
+      const animate = (delta) => {
+        const ax = g * Math.sin(angle);
+        const ay = -g * Math.cos(angle);
+
+        vx += ax * delta;
+        vy += ay * delta;
 
         sphere.position.x += vx * delta;
         sphere.position.y += vy * delta;
 
-        const planeY = Math.tan(incline) * sphere.position.x;
-
+        const planeY = Math.tan(angle) * sphere.position.x;
         if (sphere.position.y - radius < planeY) {
           sphere.position.y = planeY + radius;
           vy = -vy * damping;
-          vx = vx * damping;
-
-          if (Math.abs(vy) < 0.05) vy = 0;
-          if (Math.abs(vx) < 0.05) vx = 0;
+          vx *= damping;
         }
-      }
-
-      function updateCamera() {
-        camera.position.set(0, 15, 30);
-        camera.lookAt(0, 0, 0);
-        camera.updateMatrixWorld();
-      }
+      };
 
       anchor.onTargetFound = () => console.log("🎯 Маркер знайдено!");
       anchor.onTargetLost = () => console.log("❌ Маркер втрачено");
@@ -114,14 +88,12 @@
       await mindarThree.start();
       console.log("✅ AR система запущена");
 
-      let lastTime = performance.now();
+      let last = performance.now();
       renderer.setAnimationLoop(() => {
         const now = performance.now();
-        const delta = (now - lastTime) / 1000;
-        lastTime = now;
-
+        const delta = (now - last) / 1000;
+        last = now;
         animate(delta);
-        updateCamera();
         renderer.render(scene, camera);
       });
     };
