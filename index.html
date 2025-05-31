@@ -58,11 +58,11 @@
       const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
       group.add(sphere);
 
-      sphere.position.set(-1.3, 0.12, 0.15);
+      sphere.position.set(-1.3, 0.12, 0.15); // трішки вище площини
 
-      // Початкові швидкості та демпфування
-      let vx = Math.random() * 0.5 + 0.3;
-      let vz = Math.random() * 0.5 - 0.25;
+      // Початкові швидкості
+      let vx = 0.5 + Math.random() * 0.5;
+      let vy = 0.5 + Math.random() * 0.5;
       const damping = 0.95;
 
       await mindarThree.start();
@@ -71,12 +71,12 @@
         const delta = clock.getDelta();
 
         sphere.position.x += vx * delta;
-        sphere.position.z += vz * delta;
+        sphere.position.y += vy * delta;
 
         const maxX = planeWidth / 2 - sphereRadius;
         const minX = -planeWidth / 2 + sphereRadius;
-        const maxZ = planeHeight / 2 - sphereRadius;
-        const minZ = -planeHeight / 2 + sphereRadius;
+        const maxY = 1.0; // Верхня межа (візуально нормальна)
+        const minY = -0.1; // Нижня межа (по площині)
 
         if (sphere.position.x >= maxX) {
           sphere.position.x = maxX;
@@ -87,13 +87,13 @@
           vx = -vx * damping;
         }
 
-        if (sphere.position.z >= maxZ) {
-          sphere.position.z = maxZ;
-          vz = -vz * damping;
+        if (sphere.position.y >= maxY) {
+          sphere.position.y = maxY;
+          vy = -vy * damping;
         }
-        if (sphere.position.z <= minZ) {
-          sphere.position.z = minZ;
-          vz = -vz * damping;
+        if (sphere.position.y <= minY) {
+          sphere.position.y = minY;
+          vy = -vy * damping;
         }
 
         renderer.render(scene, camera);
