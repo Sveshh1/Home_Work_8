@@ -8,6 +8,7 @@
     {
       "imports": {
         "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
         "mindar-image-three": "https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"
       }
     }
@@ -35,25 +36,27 @@
       const clock = new THREE.Clock();
 
       // Світло
-      scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1.2));
+      const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
+      scene.add(light);
 
+      // Прив'язка до маркеру
       const anchor = mindarThree.addAnchor(0);
 
-      // Група об'єктів, яка нахилена
+      // Група, що обертається
       const group = new THREE.Group();
       anchor.group.add(group);
 
+      // Параметри площини
       const angle = Math.PI / 6; // 30 градусів
-      group.rotation.x = -angle; // нахил платформи
-
       const planeWidth = 3;
       const planeHeight = 2;
       const sphereRadius = 0.1;
 
-      // Платформа
+      // Платформа (нахилена)
       const planeGeometry = new THREE.PlaneGeometry(planeWidth, planeHeight);
       const planeMaterial = new THREE.MeshStandardMaterial({ color: 0xaaaaaa });
       const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+      plane.rotation.x = -angle;
       group.add(plane);
 
       // Кулька
@@ -62,14 +65,14 @@
       const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
       group.add(sphere);
 
-      // Початкові координати кульки (на площині)
-      sphere.position.set(-1.3, sphereRadius, 0);
+      // Початкові координати кульки
+      sphere.position.set(-1.3, 0.12, 0.15); // Y = трішки вище площини
 
       // Фізика
       let vx = 0;
       const g = 9.8;
       const ax = g * Math.sin(angle);
-      const damping = 0.9;
+      const damping = 0.95;
 
       await mindarThree.start();
 
@@ -80,7 +83,7 @@
         vx += ax * delta;
         sphere.position.x += vx * delta;
 
-        // Межі платформи
+        // Межі відбиття
         const maxX = planeWidth / 2 - sphereRadius;
         const minX = -planeWidth / 2 + sphereRadius;
 
