@@ -2,7 +2,7 @@
 <html lang="uk">
 <head>
   <meta charset="UTF-8" />
-  <title>AR: Кулька на площині</title>
+  <title>AR Кулька — Фізика</title>
   <script async src="https://ga.jspm.io/npm:es-module-shims@1.6.3/dist/es-module-shims.js"></script>
   <script type="importmap">
     {
@@ -36,55 +36,64 @@
       const clock = new THREE.Clock();
 
       // Світло
-      const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
+      const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
       scene.add(light);
 
-      // Якір для прив'язки до маркера
+      // Прив'язка до маркеру
       const anchor = mindarThree.addAnchor(0);
 
-      // Група сцени
+      // Група, що обертається
       const group = new THREE.Group();
       anchor.group.add(group);
 
       // Параметри площини
       const angle = Math.PI / 6; // 30 градусів
-      const planeWidth = 4;
-      const planeHeight = 3;
+      const planeWidth = 3;
+      const planeHeight = 2;
+      const sphereRadius = 0.1;
 
-      // Платформа
+      // Платформа (нахилена)
       const planeGeometry = new THREE.PlaneGeometry(planeWidth, planeHeight);
-      const planeMaterial = new THREE.MeshStandardMaterial({ color: 0x888888 });
+      const planeMaterial = new THREE.MeshStandardMaterial({ color: 0xaaaaaa });
       const plane = new THREE.Mesh(planeGeometry, planeMaterial);
       plane.rotation.x = -angle;
       group.add(plane);
 
       // Кулька
-      const sphereRadius = 0.1;
       const sphereGeometry = new THREE.SphereGeometry(sphereRadius, 32, 16);
       const sphereMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
       const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
       group.add(sphere);
 
       // Початкові координати кульки
-      sphere.position.set(-1.5, 0.3, 0.15); // В межах площини
+      sphere.position.set(-1.3, 0.12, 0.15); // Y = трішки вище площини
 
-      // Фізика кульки
+      // Фізика
       let vx = 0;
       const g = 9.8;
       const ax = g * Math.sin(angle);
-      const damping = 0.8;
+      const damping = 0.95;
 
       await mindarThree.start();
 
       renderer.setAnimationLoop(() => {
         const delta = clock.getDelta();
 
-        // Анімація кульки
+        // Оновлення швидкості та позиції
         vx += ax * delta;
         sphere.position.x += vx * delta;
 
-        // Відбивання від країв платформи
-        if (sphere.position.x > planeWidth / 2 - sphereRadius || sphere.position.x < -planeWidth / 2 + sphereRadius) {
+        // Межі відбиття
+        const maxX = planeWidth / 2 - sphereRadius;
+        const minX = -planeWidth / 2 + sphereRadius;
+
+        if (sphere.position.x >= maxX) {
+          sphere.position.x = maxX;
+          vx = -vx * damping;
+        }
+
+        if (sphere.position.x <= minX) {
+          sphere.position.x = minX;
           vx = -vx * damping;
         }
 
