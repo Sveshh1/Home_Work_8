@@ -1,113 +1,40 @@
-
 <!DOCTYPE html>
 <html lang="uk">
 <head>
   <meta charset="UTF-8" />
-  <title>Лабораторна робота 2</title>
-  <script async src="https://ga.jspm.io/npm:es-module-shims@1.6.3/dist/es-module-shims.js"></script>
-  <script type="importmap">
-    {
-      "imports": {
-        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
-        "mindar-image-three": "https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"
-      }
-    }
-  </script>
+  <title>Навігація по AR/VR проєкту</title>
   <style>
-    body { margin: 0; overflow: hidden; background-color: black; }
-    #ar-container { width: 100vw; height: 100vh; }
-    canvas { position: absolute; top: 0; left: 0; }
+    body {
+      font-family: sans-serif;
+      background: #111;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 50px;
+    }
+    h1 { color: #00ffff; }
+    a {
+      display: block;
+      margin: 15px;
+      padding: 10px 20px;
+      background: #222;
+      color: #00ffff;
+      text-decoration: none;
+      border: 1px solid #00ffff;
+      border-radius: 6px;
+    }
+    a:hover {
+      background: #00ffff;
+      color: #000;
+    }
   </style>
 </head>
 <body>
-  <div id="ar-container"></div>
-
-  <script type="module">
-    import * as THREE from 'three';
-    import { MindARThree } from 'mindar-image-three';
-
-    const startAR = async () => {
-      const mindarThree = new MindARThree({
-        container: document.querySelector("#ar-container"),
-        imageTargetSrc: 'https://raw.githubusercontent.com/Sveshh1/Home_Work_8/main/marker.mind',
-      });
-
-      const { renderer, scene, camera } = mindarThree;
-      const clock = new THREE.Clock();
-
-      const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
-      scene.add(light);
-
-      const anchor = mindarThree.addAnchor(0);
-      const group = new THREE.Group();
-      anchor.group.add(group);
-
-      const angle = Math.PI / 6;
-      const platformWidth = 3;
-      const platformHeight = 0.2;
-      const platformDepth = 2;
-      const sphereRadius = 0.1;
-
-      const textureLoader = new THREE.TextureLoader();
-      const woodTexture = await textureLoader.loadAsync('https://raw.githubusercontent.com/Sveshh1/Home_Work_8/main/wood.jpg');
-
-      const boxGeometry = new THREE.BoxGeometry(platformWidth, platformHeight, platformDepth);
-      const boxMaterial = new THREE.MeshStandardMaterial({ map: woodTexture });
-      const platform = new THREE.Mesh(boxGeometry, boxMaterial);
-      platform.rotation.x = -angle;
-      group.add(platform);
-
-      const sphereGeometry = new THREE.SphereGeometry(sphereRadius, 32, 16);
-      const sphereMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
-      const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-      group.add(sphere);
-
-      sphere.position.set(-1.3, platformHeight / 2 + sphereRadius, 0.15);
-
-      // Швидкість у 3 рази більша
-      let vx = (0.5 + Math.random() * 0.5) * 3;
-      let vy = (0.5 + Math.random() * 0.5) * 3;
-      const damping = 0.95;
-
-      await mindarThree.start();
-
-      renderer.setAnimationLoop(() => {
-        const delta = clock.getDelta();
-
-        sphere.position.x += vx * delta;
-        sphere.position.y += vy * delta;
-
-        const maxX = platformWidth / 2 - sphereRadius;
-        const minX = -platformWidth / 2 + sphereRadius;
-        const maxY = 0
-
-        // Межа платформи знизу (з урахуванням висоти платформи та радіуса)
-        const minY = -platformHeight / 2 + sphereRadius;
-
-        if (sphere.position.x >= maxX) {
-          sphere.position.x = maxX;
-          vx = -vx * damping;
-        }
-        if (sphere.position.x <= minX) {
-          sphere.position.x = minX;
-          vx = -vx * damping;
-        }
-
-        if (sphere.position.y >= maxY) {
-          sphere.position.y = maxY;
-          vy = -vy * damping;
-        }
-        if (sphere.position.y <= minY) {
-          sphere.position.y = minY;
-          vy = -vy * damping;
-        }
-
-        renderer.render(scene, camera);
-      });
-    };
-
-    startAR();
-  </script>
+  <h1>Меню проєкту AR / VR (v2)</h1>
+  <a href="vr.html" target="_blank">🔹 Сцена у віртуальній реальності + Three.js</a>
+  <a href="mindar.html" target="_blank">🔸 Сцена у доповненій реальності (MindAR) + Three.js</a>
+  <a href="marker.mind" download>⬇️ Завантажити MindAR маркер (.mind)</a>
+  <a href="marker.png" download>⬇️ Завантажити зображення маркера (.png)</a>
 </body>
 </html>

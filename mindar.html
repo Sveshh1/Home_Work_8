@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <title>MindAR + Three.js – Кулька на дерев’яній площині</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+      "mindar-image-three": "https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"
+    }
+  }
+  </script>
+  <style>
+    body, html { margin: 0; padding: 0; overflow: hidden; width:100%; height:100%; background: transparent; }
+    #container { width:100vw; height:100vh; position:relative; }
+    canvas { position:absolute; top:0; left:0; width:100%; height:100%; }
+  </style>
+</head>
+<body>
+  <div id="container"></div>
+  <script type="module">
+    import * as THREE from "three";
+    import { MindARThree } from "mindar-image-three";
+
+    const start = async () => {
+      const mindarThree = new MindARThree({
+        container: document.getElementById("container"),
+        imageTargetSrc: "./assets/marker.mind",
+        uiLoading: true,
+        uiScanning: true,
+        uiError: true
+      });
+      const { renderer, scene, camera } = mindarThree;
+
+      // Освітлення
+      const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
+      scene.add(hemi);
+      const dir = new THREE.DirectionalLight(0xffffff, 0.8);
+      dir.position.set(3, 10, 10);
+      scene.add(dir);
+
+      const anchor = mindarThree.addAnchor(0);
+
+      // Група з нахилом дошки
+      const group = new THREE.Group();
+      group.rotation.x = -Math.PI / 6; // -30 градусів
+      anchor.group.add(group);
+
+      // Текстура дерева
+      const tex = await new THREE.TextureLoader().loadAsync("./assets/wood.jpg");
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(2, 2);
+
+      // Платформа — дошка
+      const plane = new THREE.Mesh(
+        new THREE.PlaneGeometry(2, 4),
+        new THREE.MeshStandardMaterial({ map: tex, roughness: 0.6, metalness: 0.2 })
+      );
+      group.add(plane);
+
+      // Кулька (радіус 0.2)
+      const radius = 0.2;
+      const ball = new THREE.Mesh(
+        new THREE.SphereGeometry(radius, 32, 32),
+        new THREE.MeshStandardMaterial({ color: 0xff4444, roughness: 0.4, metalness: 0.3 })
+      );
+      ball.position.set(0, radius + 0.05, 0.001); // трохи вище площини
+      group.add(ball);
+
+      // Параметри руху
+      const W = 2, H = 4;
+      const damping = 0.9;
+
+      // Початкова швидкість (задай довільну, щоб кулька рухалась)
+      let vx = 1.5;
+      let vy = 1.0;
+      let x = 0;
+      let y = radius + 0.05;
+
+      function updateBall(dt) {
+        x += vx * dt;
+        y += vy * dt;
+
+        const maxX = W / 2 - radius;
+        const minX = -maxX;
+        const maxY = H / 2 - radius;
+        const minY = -maxY;
+
+        // Відбій по X
+        if (x > maxX) {
+          x = maxX;
+          vx = -vx * damping;
+        }
+        else if (x < minX) {
+          x = minX;
+          vx = -vx * damping;
+        }
+
+        // Відбій по Y
+        if (y > maxY) {
+          y = maxY;
+          vy = -vy * damping;
+        }
+        else if (y < minY) {
+          y = minY;
+          vy = -vy * damping;
+        }
+
+        ball.position.set(x, y, 0.001);
+      }
+
+      let prev = performance.now();
+      renderer.setAnimationLoop(() => {
+        const now = performance.now();
+        const dt = (now - prev) / 1000;
+        prev = now;
+        updateBall(dt);
+        renderer.render(scene, camera);
+      });
+
+      await mindarThree.start();
+    };
+
+    start();
+  </script>
+</body>
+</html>

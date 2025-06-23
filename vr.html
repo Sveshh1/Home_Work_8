@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <title>VR Сцена – Гумова кулька</title>
+  <style>
+    body { margin: 0; overflow: hidden; background-color: #111; }
+    canvas { display: block; width: 100vw; height: 100vh; }
+  </style>
+</head>
+<body>
+  <script type="module">
+    import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
+    import { VRButton } from 'https://unpkg.com/three@0.160.0/examples/jsm/webxr/VRButton.js';
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x111111);
+
+    const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 100);
+    camera.position.set(0, 2, 5);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.xr.enabled = true;
+    document.body.appendChild(renderer.domElement);
+    document.body.appendChild(VRButton.createButton(renderer));
+
+    const light = new THREE.HemisphereLight(0xffffff, 0x444444);
+    scene.add(light);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+    dirLight.position.set(5, 10, 5);
+    scene.add(dirLight);
+
+    const incline = Math.PI / 6;
+    const gravity = 9.81;
+    const damping = 0.9;
+    const radius = 0.5;
+    let vx = 0, vy = 0;
+
+    const loader = new THREE.TextureLoader();
+    const woodMat = new THREE.MeshStandardMaterial({ color: 0x808080 });
+    loader.load("./assets/wood.jpg", (texture) => {
+      texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+      texture.repeat.set(5, 5);
+      woodMat.map = texture;
+      woodMat.needsUpdate = true;
+    });
+
+    const plane = new THREE.Mesh(new THREE.PlaneGeometry(10, 20), woodMat);
+    plane.rotation.x = -incline;
+    scene.add(plane);
+
+    const ball = new THREE.Mesh(
+      new THREE.SphereGeometry(radius, 64, 64),
+      new THREE.MeshStandardMaterial({ color: 0xff4444 })
+    );
+    ball.position.set(0, 3, 0);
+    scene.add(ball);
+
+    function animateBall(delta) {
+      vx += gravity * Math.sin(incline) * delta;
+      vy -= gravity * Math.cos(incline) * delta;
+
+      ball.position.x += vx * delta;
+      ball.position.y += vy * delta;
+
+      const maxX = 5 - radius;
+      const minX = -5 + radius;
+
+      if (ball.position.x > maxX || ball.position.x < minX) {
+        vx = -vx * damping;
+        ball.position.x = THREE.MathUtils.clamp(ball.position.x, minX, maxX);
+      }
+
+      const planeY = Math.tan(incline) * ball.position.x;
+      if (ball.position.y - radius < planeY) {
+        ball.position.y = planeY + radius;
+        vy = -vy * damping;
+      }
+    }
+
+    let last = performance.now();
+    renderer.setAnimationLoop(() => {
+      const now = performance.now();
+      const delta = (now - last) / 1000;
+      last = now;
+
+      animateBall(delta);
+      renderer.render(scene, camera);
+    });
+  </script>
+</body>
+</html>
